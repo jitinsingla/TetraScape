@@ -296,12 +296,13 @@ class Tetra:
     # Function to generate the tetrahedron model
     def tetrahedron(self, sequence=False, chains=False, in_sequence=True):
         # Generate the model via given coordinates
-        def add_to_sub_model(va, ta, cid):
+        def add_to_sub_model(va, ta, color, cid):
             sub_model = Model("Chain " + cid, self.session)
             va = np.reshape(va, (va.shape[0] * va.shape[1], va.shape[2]))
             ta = np.array(ta, np.int32)
 
             sub_model.set_geometry(va, calculate_vertex_normals(va, ta), ta)
+            sub_model.vertex_colors = color
             self.tetrahedron_model.add([sub_model])
 
         # First do the iterations over all the residues to calculate the 
@@ -317,30 +318,34 @@ class Tetra:
             for (ch_id, chain) in self.protein.items():
                 # In case of in_sequence=False, all the chains not in sequence will be converted to tetra model
                 if not (ch_id in sequence.keys() or in_sequence):
-                    va, ta, x = [], [], 0
+                    va, ta, color, x = [], [], [], 0
                     for am in chain:
                         ta.extend([[12*x, 12*x+3, 12*x+6], [12*x+1, 12*x+7, 12*x+9], [12*x+2, 12*x+4, 12*x+10], [12*x+5, 12*x+8, 12*x+11]])
+                        color.extend([am.obj.ribbon_color]*12)
                         va.append(am.model_coords)
                         x += 1
 
                     va = np.array(va, np.float32)
+                    color = np.array(color, np.int32)
                     if 0 not in va.shape:
-                        add_to_sub_model(va, ta, ch_id)
+                        add_to_sub_model(va, ta, color, ch_id)
 
             for (ids, seq_lst) in sequence.items():
-                va, ta, x = [], [], 0
+                va, ta, color, x = [], [], [], 0
                 for am in self.protein[ids]:
                     cond = any([seq[0] <= am.obj.number and am.obj.number < seq[1] for seq in seq_lst])
 
                     # Check weather the current residue to be converted to tetra model or not
                     if (in_sequence and cond) or not (in_sequence or cond):
                         ta.extend([[12*x, 12*x + 3, 12*x + 6], [12*x + 1, 12*x + 7, 12*x + 9], [12*x + 2, 12*x + 4, 12*x + 10], [12*x + 5, 12*x + 8, 12*x + 11]])
+                        color.extend([am.obj.ribbon_color]*12)
                         va.append(am.model_coords)
                         x += 1
 
                 va = np.array(va, np.float32)
+                color = np.array(color, np.int32)
                 if 0 not in va.shape:
-                    add_to_sub_model(va, ta, ids)
+                    add_to_sub_model(va, ta, color, ids)
 
         else:
             if not chains:
@@ -352,19 +357,24 @@ class Tetra:
                 if ids not in chains and in_sequence or ids in chains and not in_sequence:
                     continue
 
-                va, ta = np.array([am.model_coords for am in self.protein[ids]], np.float32), []
-                for x in range(len(self.protein[ids])):
+                va, ta, color, x = [], [], [], 0
+                for am in self.protein[ids]:
+                    va.append(am.model_coords)
+                    color.extend([am.obj.ribbon_color]*12)
                     ta.extend([[12*x, 12*x + 3, 12*x + 6], [12*x + 1, 12*x + 7, 12*x + 9], [12*x + 2, 12*x + 4, 12*x + 10], [12*x + 5, 12*x + 8, 12*x + 11]])
+                    x += 1
 
+                va = np.array(va, np.float32)
+                color = np.array(color, np.int32)
                 if 0 not in va.shape:
-                    add_to_sub_model(va, ta, ids)
+                    add_to_sub_model(va, ta, color, ids)
 
         self.session.models.add([self.tetrahedron_model])
 
     def massing(self, sequence=False, chains=False, unit=1, alpha=2):
 
         # Generate the model via given coordinates
-        def add_to_sub_model(ms, mass_id):
+        def add_to_sub_model(ms, mass_id, color):
             massing_coords, faces = self.grow(ms, unit, alpha)
             if not np.all(massing_coords.shape):
                 return
@@ -372,6 +382,7 @@ class Tetra:
             sub_model = Model("Chain " + str(mass_id), self.session)
             massing_coords = np.reshape(massing_coords, (massing_coords.shape[0] * massing_coords.shape[1], massing_coords.shape[2]))
             sub_model.set_geometry(massing_coords, calculate_vertex_normals(massing_coords, faces), faces)
+            sub_model.vertex_colors = np.array([np.average(color, axis = 0)] * massing_coords.size * 12)
             self.massing_model.add([sub_model])
 
         mass_id = 1
@@ -386,14 +397,16 @@ class Tetra:
                         continue
 
                     for seq in seq_lst:
-                        ms = []
+                        ms, color = [], []
                         for am in chain:
                             # Check weather the current residue to be included to massing model or not
                             if seq[0] <= am.obj.number and am.obj.number < seq[1]:
                                 ms.extend(am.coords)
+                                color.extend([am.obj.ribbon_color]*12)
 
                         if ms:
-                            add_to_sub_model(ms, mass_id)
+                            color = np.array(color, np.int32)
+                            add_to_sub_model(ms, mass_id, color)
                             mass_id += 1
 
         else:
@@ -402,7 +415,9 @@ class Tetra:
                 self.tetrahedron(chains=chains, in_sequence=False)
                 for ids in chains:
                     ms = [v for x in self.protein[ids] for v in x.coords]
-                    add_to_sub_model(ms, mass_id)
+                    color = np.array([x.obj.ribbon_color for x in self.protein[ids] for i in range(12)], np.int32)
+
+                    add_to_sub_model(ms, mass_id, color)
                     mass_id += 1
             # If not given chains the convert everything into tetra model by-default.
             else:
