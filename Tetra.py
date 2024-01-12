@@ -294,7 +294,13 @@ class Tetra:
         return np.array(massing_coords), np.array(faces[:len(massing_coords) * 4], np.int32)
 
     # Function to generate the tetrahedron model
-    def tetrahedron(self, sequence=False, chains=False, in_sequence=True):
+    def tetrahedron(self, sequence=False, chains=False, in_sequence=True, scan=True):
+        if scan:
+            # First do the iterations over all the residues to calculate the 
+            # required unit size tetrahedron and all the required coordinates to form the model.
+            self.iterate_aminos()
+            self.iterate_aminos(execute=True)
+
         # Generate the model via given coordinates
         def add_to_sub_model(va, ta, color, cid):
             sub_model = Model("Chain " + cid, self.session)
@@ -304,11 +310,6 @@ class Tetra:
             sub_model.set_geometry(va, calculate_vertex_normals(va, ta), ta)
             sub_model.vertex_colors = color
             self.tetrahedron_model.add([sub_model])
-
-        # First do the iterations over all the residues to calculate the 
-        # required unit size tetrahedron and all the required coordinates to form the model.
-        self.iterate_aminos()
-        self.iterate_aminos(execute=True)
 
         # If given the sequence information on which residue to transform into tetrahedron model
         # There are two cases, one where input sequence need to be converted to tetra model and
@@ -371,7 +372,13 @@ class Tetra:
 
         self.session.models.add([self.tetrahedron_model])
 
-    def massing(self, sequence=False, chains=False, unit=1, alpha=2):
+    def massing(self, sequence=False, chains=False, unit=1, alpha=2, tetra=False):
+
+        # First do the iterations over all the residues to calculate the 
+        # required unit size tetrahedron and all the required coordinates to form the model.
+        # No need to do another scan while calling tetrahedron function.
+        self.iterate_aminos()
+        self.iterate_aminos(execute=True)
 
         # Generate the model via given coordinates
         def add_to_sub_model(ms, mass_id, color):
@@ -390,7 +397,8 @@ class Tetra:
         if sequence:
             # Input given sequence in tetra model with in_sequence=False. 
             # This way everything other than massing will be in tetra model.
-            self.tetrahedron(sequence=sequence, in_sequence=False)
+            if tetra:
+                self.tetrahedron(sequence=sequence, in_sequence=False, scan=False)
             for (ch_id, chain) in self.protein.items():
                 for (ids, seq_lst) in sequence.items():
                     if ids != ch_id:
@@ -412,16 +420,18 @@ class Tetra:
         else:
             # If chains are given then convert them into massing model and everthing else into tetra model
             if chains:
-                self.tetrahedron(chains=chains, in_sequence=False)
+                if tetra:
+                    self.tetrahedron(chains=chains, in_sequence=False, scan=False)
                 for ids in chains:
                     ms = [v for x in self.protein[ids] for v in x.coords]
                     color = np.array([x.obj.ribbon_color for x in self.protein[ids] for i in range(12)], np.int32)
 
                     add_to_sub_model(ms, mass_id, color)
                     mass_id += 1
+
             # If not given chains the convert everything into tetra model by-default.
             else:
-                self.tetrahedron()
+                self.massing(chains=self.protein.keys())
 
         self.session.models.add([self.massing_model])
 
@@ -434,13 +444,13 @@ class Tetra:
 #         chains = list(enumerate(chains))
 #     t.tetrahedron(chains=chains)
 
-def massing_model(session, residues=None, unit=1, alpha=2):
+def massing_model(session, residues=None, unit=1, alpha=2, tetra=False):
     if residues is None:
         from chimerax.atomic import all_residues
         residues = all_residues(session)
     for structure, chain_residue_intervals in residue_intervals(residues):
         t = Tetra(session, models = [structure])
-        t.massing(sequence = chain_residue_intervals, unit = unit, alpha = alpha)
+        t.massing(sequence = chain_residue_intervals, unit = unit, alpha = alpha, tetra = tetra)
 
 def residue_intervals(residues):
     return [(structure, {chain_id:number_intervals(cres.numbers) for s, chain_id, cres in sres.by_chain})
@@ -471,7 +481,7 @@ def register_command(session):
 
     m_desc = CmdDesc(required = [],
                      optional=[("residues", ResiduesArg)],
-                     keyword=[("unit", FloatArg), ("alpha", FloatArg)],
+                     keyword=[("unit", FloatArg), ("alpha", FloatArg), ("tetra", BoolArg)],
                      synopsis = 'create tetrahedral massing model')
     register('massing', m_desc, massing_model, logger=session.logger)
 
