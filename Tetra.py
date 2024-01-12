@@ -452,6 +452,14 @@ def massing_model(session, residues=None, unit=1, alpha=2, tetra=False):
         t = Tetra(session, models = [structure])
         t.massing(sequence = chain_residue_intervals, unit = unit, alpha = alpha, tetra = tetra)
 
+def tetra_model(session, residues=None, revSec=False):
+    if residues is None:
+        from chimerax.atomic import all_residues
+        residues = all_residues(session)
+    for structure, chain_residue_intervals in residue_intervals(residues):
+        t = Tetra(session, models = [structure])
+        t.tetrahedron(sequence = chain_residue_intervals, in_sequence = not revSec)
+
 def residue_intervals(residues):
     return [(structure, {chain_id:number_intervals(cres.numbers) for s, chain_id, cres in sres.by_chain})
             for structure, sres in residues.by_structure]
@@ -483,6 +491,13 @@ def register_command(session):
                      optional=[("residues", ResiduesArg)],
                      keyword=[("unit", FloatArg), ("alpha", FloatArg), ("tetra", BoolArg)],
                      synopsis = 'create tetrahedral massing model')
+
+    t_desc = CmdDesc(required = [],
+                     optional=[("residues", ResiduesArg)],
+                     keyword=[("revSec", BoolArg)],
+                     synopsis = 'create tetrahedral model')
+
     register('massing', m_desc, massing_model, logger=session.logger)
+    register('tetra', t_desc, tetra_model, logger=session.logger)
 
 register_command(session)
