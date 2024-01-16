@@ -2,8 +2,9 @@ import numpy as np
 import alphashape, trimesh
 from itertools import permutations, combinations
 
-from chimerax.core.commands import CmdDesc
 from chimerax.core.models import Model
+from chimerax.core.commands import CmdDesc
+from chimerax.atomic import UniqueChainsArg
 from chimerax.surface import calculate_vertex_normals
 from chimerax.core.commands import ListOf, SetOf, TupleOf, Or, RepeatOf, BoolArg, IntArg
 
@@ -361,6 +362,7 @@ class Tetra:
                     add_to_sub_model(va, ta, color, ids)
 
         else:
+            print("Chains : ", chains)
             if not chains:
                 # If there is not chains in input then convert everthing in tetra model by-deault.
                 chains = self.protein.keys()
@@ -431,6 +433,7 @@ class Tetra:
                             mass_id += 1
 
         else:
+            print("Chains : ", chains)
             # If chains are given then convert them into massing model and everthing else into tetra model
             if chains:
                 if tetra:
@@ -456,13 +459,40 @@ class Tetra:
 #         chains = list(enumerate(chains))
 #     t.tetrahedron(chains=chains)
 
-def massing_model(session, residues=None, unit=1, alpha=2):
+def massing_model(session, chains=False, residues=None, unit=1, alpha=2, tetra=False):
+    # if residues is None:
+    #     from chimerax.atomic import all_residues
+    #     residues = all_residues(session)
+    if chains:
+        chains = [c.chain_id for c in chains]
+
     if residues is None:
-        from chimerax.atomic import all_residues
-        residues = all_residues(session)
-    for structure, chain_residue_intervals in residue_intervals(residues):
-        t = Tetra(session, models = [structure])
-        t.massing(sequence = chain_residue_intervals, unit = unit, alpha = alpha)
+        t = Tetra(session)
+        t.massing(chains = chains, unit = unit, alpha = alpha, tetra = True)
+        print("Massing", chains)
+    else:
+        for structure, chain_residue_intervals in residue_intervals(residues):
+            t = Tetra(session, models = [structure])
+            t.massing(sequence = chain_residue_intervals, unit = unit, alpha = alpha, tetra = True)
+            print(chain_residue_intervals)
+
+def tetrahedral_model(session, chains=False, residues=None, ss=["all"]):
+    # if residues is None:
+    #     from chimerax.atomic import all_residues
+    #     residues = all_residues(session)
+    if chains:
+        chains = [c.chain_id for c in chains]
+
+    if residues is None:
+        t = Tetra(session)
+        t.tetrahedron(chains = chains, ss = ss, scan = True)
+        print("Tetrahedrons", chains)
+        print("SS", ss)
+    else:
+        for structure, chain_residue_intervals in residue_intervals(residues):
+            t = Tetra(session, models = [structure])
+            t.tetrahedron(sequence = chain_residue_intervals, ss = ss, scan = True)
+            print(chain_residue_intervals)
 
 def residue_intervals(residues):
     return [(structure, {chain_id:number_intervals(cres.numbers) for s, chain_id, cres in sres.by_chain})
@@ -486,15 +516,16 @@ def register_command(session):
     from chimerax.core.commands import CmdDesc, register, FloatArg
     from chimerax.atomic import ResiduesArg
 
-#     t_desc = CmdDesc(required = [],
-#                      optional=[("chains", UniqueChainsArg)],
-#                      synopsis = 'creates tetrahedral model')
-#     register('tetra', t_desc, tetrahedral_model, logger=session.logger)
+    t_desc = CmdDesc(required = [],
+                    optional=[("chains", UniqueChainsArg)],
+                    keyword=[("residues", ResiduesArg), ("chains", UniqueChainsArg), ("ss %s", ListOf(str))],
+                    synopsis = 'creates tetrahedral model')
+    register('tetra', t_desc, tetrahedral_model, logger=session.logger)
 
     m_desc = CmdDesc(required = [],
-                     optional=[("residues", ResiduesArg)],
-                     keyword=[("unit", FloatArg), ("alpha", FloatArg)],
-                     synopsis = 'create tetrahedral massing model')
+                    optional=[("chains", UniqueChainsArg)],
+                    keyword=[("residues", ResiduesArg), ("unit", FloatArg), ("alpha", FloatArg), ("tetra", BoolArg)],
+                    synopsis = 'create tetrahedral massing model')
     register('massing', m_desc, massing_model, logger=session.logger)
 
-register_command(session)
+# register_command(session)
