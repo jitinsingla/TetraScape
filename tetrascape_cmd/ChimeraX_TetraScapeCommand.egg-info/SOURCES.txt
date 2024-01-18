@@ -1,0 +1,7 @@
+ChimeraX_TetraScapeCommand.egg-info/PKG-INFO
+ChimeraX_TetraScapeCommand.egg-info/SOURCES.txt
+ChimeraX_TetraScapeCommand.egg-info/dependency_links.txt
+ChimeraX_TetraScapeCommand.egg-info/requires.txt
+ChimeraX_TetraScapeCommand.egg-info/top_level.txt
+src/__init__.py
+src/cmd.py

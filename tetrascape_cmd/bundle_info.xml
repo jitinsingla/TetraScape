@@ -15,14 +15,16 @@
 	<Dependencies> 
 		<Dependency name = "ChimeraX-Core"/> 
 		<Dependency name = "ChimeraX-Surface"/>
+		<Dependency name = "alphashape"/>
+		<Dependency name = "trimesh"/>
 	</Dependencies>
 
 	<Classifiers>
 		<PythonClassifier> Development Status :: 1 - Planning </PythonClassifier>
 		<PythonClassifier> License :: Freeware </PythonClassifier>
 
-		<!-- <ChimeraXClassifier> ChimeraX :: Command :: tetra :: General :: Create a tetrahedral model 
-		</ChimeraXClassifier> -->
+		<ChimeraXClassifier> ChimeraX :: Command :: tetra :: General :: Create a tetrahedral model 
+		</ChimeraXClassifier>
 		<ChimeraXClassifier> ChimeraX :: Command :: massing :: General :: Create a massing model 
 		</ChimeraXClassifier>
 

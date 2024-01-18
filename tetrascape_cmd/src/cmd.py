@@ -3,10 +3,8 @@ import alphashape, trimesh
 from itertools import permutations, combinations
 
 from chimerax.core.models import Model
-from chimerax.atomic import ResiduesArg
-from chimerax.core.commands import CmdDesc
+from chimerax.atomic import UniqueChainsArg, ResiduesArg
 from chimerax.surface import calculate_vertex_normals
-from chimerax.core.commands import ListOf, SetOf, TupleOf, Or, RepeatOf, BoolArg, IntArg, CmdDesc, register, FloatArg
 
 ht3 = 0.81649658092772603273242802490196379732198249355222337614423086
 ht2 = 0.86602540378443864676372317075293618347140262690519031402790349
@@ -295,77 +293,79 @@ class Tetra:
         return np.array(massing_coords), np.array(faces[:len(massing_coords) * 4], np.int32)
 
     # Function to generate the tetrahedron model
-    def tetrahedron(self, sequence=False, chains=False, in_sequence=True):
+    def tetrahedron(self, sequence=False, in_sequence=True, ss=["all"], scan=True):
+        if scan:
+            # First do the iterations over all the residues to calculate the 
+            # required unit size tetrahedron and all the required coordinates to form the model.
+            self.iterate_aminos()
+            self.iterate_aminos(execute=True)
+
+        def check_ss(am):
+            if "all" in ss:
+                return True
+            if am.obj.is_helix and "helix" in ss:
+                return True
+            if am.obj.is_strand and "strand" in ss:
+                return True
+            if not (am.obj.is_helix or am.obj.is_strand) and "loop" in ss:
+                return True
+            return False
+
         # Generate the model via given coordinates
-        def add_to_sub_model(va, ta, cid):
+        def add_to_sub_model(va, ta, color, cid):
             sub_model = Model("Chain " + cid, self.session)
             va = np.reshape(va, (va.shape[0] * va.shape[1], va.shape[2]))
             ta = np.array(ta, np.int32)
 
             sub_model.set_geometry(va, calculate_vertex_normals(va, ta), ta)
+            sub_model.vertex_colors = color
             self.tetrahedron_model.add([sub_model])
 
-        # First do the iterations over all the residues to calculate the 
-        # required unit size tetrahedron and all the required coordinates to form the model.
-        self.iterate_aminos()
-        self.iterate_aminos(execute=True)
-
-        # If given the sequence information on which residue to transform into tetrahedron model
-        # There are two cases, one where input sequence need to be converted to tetra model and
-        # the other that everything else other than in input sequence to be converted to tetra model.
-        # This will be defined via in_sequence.
-        if sequence:
-            for (ch_id, chain) in self.protein.items():
-                # In case of in_sequence=False, all the chains not in sequence will be converted to tetra model
-                if not (ch_id in sequence.keys() or in_sequence):
-                    va, ta, x = [], [], 0
-                    for am in chain:
+        for (ch_id, chain) in self.protein.items():
+            # In case of in_sequence=False, all the chains not in sequence will be converted to tetra model
+            if not (ch_id in sequence.keys() or in_sequence):
+                va, ta, color, x = [], [], [], 0
+                for am in chain:
+                    if (check_ss(am)):
                         ta.extend([[12*x, 12*x+3, 12*x+6], [12*x+1, 12*x+7, 12*x+9], [12*x+2, 12*x+4, 12*x+10], [12*x+5, 12*x+8, 12*x+11]])
-                        va.append(am.model_coords)
-                        x += 1
-
-                    va = np.array(va, np.float32)
-                    if 0 not in va.shape:
-                        add_to_sub_model(va, ta, ch_id)
-
-            for (ids, seq_lst) in sequence.items():
-                va, ta, x = [], [], 0
-                for am in self.protein[ids]:
-                    cond = any([seq[0] <= am.obj.number and am.obj.number < seq[1] for seq in seq_lst])
-
-                    # Check weather the current residue to be converted to tetra model or not
-                    if (in_sequence and cond) or not (in_sequence or cond):
-                        ta.extend([[12*x, 12*x + 3, 12*x + 6], [12*x + 1, 12*x + 7, 12*x + 9], [12*x + 2, 12*x + 4, 12*x + 10], [12*x + 5, 12*x + 8, 12*x + 11]])
+                        color.extend([am.obj.ribbon_color]*12)
                         va.append(am.model_coords)
                         x += 1
 
                 va = np.array(va, np.float32)
+                color = np.array(color, np.int32)
                 if 0 not in va.shape:
-                    add_to_sub_model(va, ta, ids)
+                    add_to_sub_model(va, ta, color, ch_id)
 
-        else:
-            if not chains:
-                # If there is not chains in input then convert everthing in tetra model by-deault.
-                chains = self.protein.keys()
+        for (ids, seq_lst) in sequence.items():
+            va, ta, color, x = [], [], [], 0
+            for am in self.protein[ids]:
+                cond = any([seq[0] <= am.obj.number and am.obj.number <= seq[1] for seq in seq_lst])
 
-            for ids in self.protein.keys():
-                # Check weather current chain needed to converted to tetra model
-                if ids not in chains and in_sequence or ids in chains and not in_sequence:
-                    continue
-
-                va, ta = np.array([am.model_coords for am in self.protein[ids]], np.float32), []
-                for x in range(len(self.protein[ids])):
+                # Check weather the current residue to be converted to tetra model or not
+                if (in_sequence and cond) or not (in_sequence or cond) and check_ss(am):
                     ta.extend([[12*x, 12*x + 3, 12*x + 6], [12*x + 1, 12*x + 7, 12*x + 9], [12*x + 2, 12*x + 4, 12*x + 10], [12*x + 5, 12*x + 8, 12*x + 11]])
+                    color.extend([am.obj.ribbon_color]*12)
+                    va.append(am.model_coords)
+                    x += 1
 
-                if 0 not in va.shape:
-                    add_to_sub_model(va, ta, ids)
+            va = np.array(va, np.float32)
+            color = np.array(color, np.int32)
+            if 0 not in va.shape:
+                add_to_sub_model(va, ta, color, ids)
 
         self.session.models.add([self.tetrahedron_model])
 
-    def massing(self, sequence=False, chains=False, unit=1, alpha=2):
+    def massing(self, sequence=False, unit=1, alpha=2, tetra=False):
+
+        # First do the iterations over all the residues to calculate the 
+        # required unit size tetrahedron and all the required coordinates to form the model.
+        # No need to do another scan while calling tetrahedron function.
+        self.iterate_aminos()
+        self.iterate_aminos(execute=True)
 
         # Generate the model via given coordinates
-        def add_to_sub_model(ms, mass_id):
+        def add_to_sub_model(ms, mass_id, color):
             massing_coords, faces = self.grow(ms, unit, alpha)
             if not np.all(massing_coords.shape):
                 return
@@ -373,71 +373,60 @@ class Tetra:
             sub_model = Model("Chain " + str(mass_id), self.session)
             massing_coords = np.reshape(massing_coords, (massing_coords.shape[0] * massing_coords.shape[1], massing_coords.shape[2]))
             sub_model.set_geometry(massing_coords, calculate_vertex_normals(massing_coords, faces), faces)
+            sub_model.vertex_colors = np.array([np.average(color, axis = 0)] * massing_coords.size * 12)
             self.massing_model.add([sub_model])
 
+        # Input given sequence in tetra model with in_sequence=False. 
+        # This way everything other than massing will be in tetra model.
         mass_id = 1
-        # Generate massing via given sequence
-        if sequence:
-            # Input given sequence in tetra model with in_sequence=False. 
-            # This way everything other than massing will be in tetra model.
-            self.tetrahedron(sequence=sequence, in_sequence=False)
-            for (ch_id, chain) in self.protein.items():
-                for (ids, seq_lst) in sequence.items():
-                    if ids != ch_id:
-                        continue
+        if tetra:
+            self.tetrahedron(sequence=sequence, in_sequence=False, scan=False)
+        for (ch_id, chain) in self.protein.items():
+            for (ids, seq_lst) in sequence.items():
+                if ids != ch_id:
+                    continue
 
-                    for seq in seq_lst:
-                        ms = []
-                        for am in chain:
-                            # Check weather the current residue to be included to massing model or not
-                            if seq[0] <= am.obj.number and am.obj.number < seq[1]:
-                                ms.extend(am.coords)
+                for seq in seq_lst:
+                    ms, color = [], []
+                    for am in chain:
+                        # Check weather the current residue to be included to massing model or not
+                        if seq[0] <= am.obj.number and am.obj.number <= seq[1]:
+                            ms.extend(am.coords)
+                            color.extend([am.obj.ribbon_color]*12)
 
-                        if ms:
-                            add_to_sub_model(ms, mass_id)
-                            mass_id += 1
-
-        else:
-            # If chains are given then convert them into massing model and everthing else into tetra model
-            if chains:
-                self.tetrahedron(chains=chains, in_sequence=False)
-                for ids in chains:
-                    ms = [v for x in self.protein[ids] for v in x.coords]
-                    add_to_sub_model(ms, mass_id)
-                    mass_id += 1
-            # If not given chains the convert everything into tetra model by-default.
-            else:
-                self.tetrahedron()
+                    if ms:
+                        color = np.array(color, np.int32)
+                        add_to_sub_model(ms, mass_id, color)
+                        mass_id += 1
 
         self.session.models.add([self.massing_model])
 
-
-## Need to create a commmand input system. Later will be done using UI intergrations.
-# def tetrahedral_model(session, chains=False):
-#     #from Tetra import Tetra
-#     t = Tetra(session)
-#     if chains:
-#         chains = list(enumerate(chains))
-#     t.tetrahedron(chains=chains)
-
-def massing_model(session, residues=None, unit=1, alpha=2):
+def massing_model(session, residues=None, unit=1, alpha=2, tetra=False):
     if residues is None:
         from chimerax.atomic import all_residues
         residues = all_residues(session)
     for structure, chain_residue_intervals in residue_intervals(residues):
         t = Tetra(session, models = [structure])
-        t.massing(sequence = chain_residue_intervals, unit = unit, alpha = alpha)
+        t.massing(sequence = chain_residue_intervals, unit = unit, alpha = alpha, tetra = tetra)
+
+def tetrahedral_model(session, residues=None, revSeq=False):
+    if residues is None:
+        from chimerax.atomic import all_residues
+        residues = all_residues(session)
+    for structure, chain_residue_intervals in residue_intervals(residues):
+        t = Tetra(session, models = [structure])
+        t.tetrahedron(sequence = chain_residue_intervals, in_sequence = not revSeq)
 
 def residue_intervals(residues):
     return [(structure, {chain_id:number_intervals(cres.numbers) for s, chain_id, cres in sres.by_chain})
             for structure, sres in residues.by_structure]
 
-def number_intervals(numbers):            
+def number_intervals(numbers):      
     intervals = []
     start = end = None
     for num in numbers:
         if start is None:
-            start = end = num
+            start = end = num 
         elif num == end+1:
             end = num
         else:
@@ -445,17 +434,3 @@ def number_intervals(numbers):
             start = end = num
     intervals.append((start,end))
     return intervals
-    
-# def register_command(session):
-
-#     t_desc = CmdDesc(required = [],
-#                      optional=[("chains", UniqueChainsArg)],
-#                      synopsis = 'creates tetrahedral model')
-#     register('tetra', t_desc, tetrahedral_model, logger=session.logger)
-
-m_desc = CmdDesc(required = [], optional=[("residues", ResiduesArg)], 
-                keyword=[("unit", FloatArg), ("alpha", FloatArg)],
-                synopsis = 'create tetrahedral massing model')
-
-# register('massing', m_desc, massing_model, logger=session.logger)
-# register_command(session)
