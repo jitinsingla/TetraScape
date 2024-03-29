@@ -1,5 +1,4 @@
 import numpy as np
-from stl import mesh
 import alphashape, trimesh
 from itertools import permutations, combinations
 
@@ -208,43 +207,8 @@ class Tetra:
     # Function to grow massing over the provided coordinates
     def grow(self, ms, unit, alpha):
 
-        def rotate(vec, roll, pitch, yaw):
-            Rx = np.matrix([[1, 0, 0],
-                            [0, np.cos(roll), -np.sin(roll)],
-                            [0, np.sin(roll), np.cos(roll)]], dtype = np.float32)
-
-            Ry = np.matrix([[np.cos(pitch), 0, np.sin(pitch)],
-                            [0, 1, 0],
-                            [-np.sin(pitch), 0, np.cos(pitch)]], dtype = np.float32)
-
-            Rz = np.matrix([[np.cos(yaw), -np.sin(yaw), 0],
-                            [np.sin(yaw), np.cos(yaw), 0],
-                            [0, 0, 1]], dtype = np.float32)
-
-            R = np.eye(3, 3, dtype = np.float32)
-            R = np.matmul(R, Rx)
-            R = np.matmul(R, Ry)
-            R = np.matmul(R, Rz)
-
-            vec = np.matmul(R, vec)
-            return vec
-
-
-
         # Created a mesh to define the bounday of all given coordinates
-
-        vec_dir = (ms[1] - ms[0])
-        vec_dir /= np.linalg.norm(vec_dir)
-        angles = (np.arccos(vec_dir[2]), np.arccos(vec_dir[1]), np.arccos(vec_dir[0]))
-
-        ms_bounds = np.array([[30, 30, 30], [30, 30, -30], [30, -30, 30], [-30, 30, 30], [-30, -30, 30], [-30, 30, -30], [30, -30, -30], [-30, -30, -30]], dtype = np.float32)
-        for i in range(0, len(ms_bounds)):
-            ms_bounds[i] = rotate(ms_bounds[i], *angles)
-
-        print(ms_bounds)
-
-        mesh = alphashape.alphashape(ms_bounds, 0.001)
-
+        mesh = alphashape.alphashape(ms, alpha * 0.1)
         inside = lambda ms: trimesh.proximity.ProximityQuery(ms).signed_distance
         el = self.edge_length * unit
 
@@ -274,14 +238,14 @@ class Tetra:
 
             for p in combine:
                 pt1, pt2, pt3, pt4 = [np.array(x) for x in p]
-                p1, p3, p2, p4 = (pt1 + pt2) / 2, pt4 + (pt2 - pt1) / 2, (pt1 + pt2) / 2 + (pt4 - pt3), pt4 + (pt1 - pt2) / 2
+                p1, p2, p3, p4 = (pt1 + pt2) / 2, pt4 + (pt2 - pt1) / 2, (pt1 + pt2) / 2 + (pt4 - pt3), pt4 + (pt1 - pt2) / 2
                 centroid = (p1 + p2 + p3 + p4) / 4
 
                 t = tuple((round(centroid[0], 1), round(centroid[1], 1), round(centroid[2], 1)))
                 is_visited = t in visited
 
                 # Check if this tetrahedron is already generated. Prevents infinite looping.
-                if not is_visited and (inside(mesh)((centroid,)) > -unit):
+                if not is_visited and (inside(mesh)((centroid,)) > -3 * unit):
                     massing_coords.append([p1, p1, p1, p2, p2, p2, p3, p3, p3, p4, p4, p4])
                     faces.extend([[12*tcnt, 12*tcnt + 3, 12*tcnt + 6], [12*tcnt + 1, 12*tcnt + 7, 12*tcnt + 9], [12*tcnt + 2, 12*tcnt + 4, 12*tcnt + 10], [12*tcnt + 5, 12*tcnt + 8, 12*tcnt + 11]])
                     tcnt += 1
@@ -375,6 +339,10 @@ class Tetra:
 
         for (ids, seq_lst) in sequence.items():
             va, ta, color, x = [], [], [], 0
+
+            if ids not in self.protein.keys():
+                continue
+                
             for am in self.protein[ids]:
                 cond = any([seq[0] <= am.obj.number and am.obj.number <= seq[1] for seq in seq_lst])
 
@@ -411,13 +379,6 @@ class Tetra:
             sub_model.set_geometry(massing_coords, calculate_vertex_normals(massing_coords, faces), faces)
             sub_model.vertex_colors = np.array([np.average(color, axis = 0)] * massing_coords.size * 12)
             self.massing_model.add([sub_model])
-
-            cube = mesh.Mesh(np.zeros(faces.shape[0], dtype=mesh.Mesh.dtype))
-            for i, f in enumerate(faces):
-                for j in range(3):
-                    cube.vectors[i][j] = massing_coords[f[j],:]
-
-            cube.save('cube.stl')
 
         # Input given sequence in tetra model with in_sequence=False. 
         # This way everything other than massing will be in tetra model.
