@@ -1,4 +1,0 @@
-ChimeraX-Core
-ChimeraX-Surface
-alphashape
-trimesh
