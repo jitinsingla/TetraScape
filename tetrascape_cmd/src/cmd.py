@@ -293,23 +293,12 @@ class Tetra:
         return np.array(massing_coords), np.array(faces[:len(massing_coords) * 4], np.int32)
 
     # Function to generate the tetrahedron model
-    def tetrahedron(self, sequence=False, in_sequence=True, ss=["all"], scan=True):
+    def tetrahedron(self, sequence=False, in_sequence=True, scan=True):
         if scan:
             # First do the iterations over all the residues to calculate the 
             # required unit size tetrahedron and all the required coordinates to form the model.
             self.iterate_aminos()
             self.iterate_aminos(execute=True)
-
-        def check_ss(am):
-            if "all" in ss:
-                return True
-            if am.obj.is_helix and "helix" in ss:
-                return True
-            if am.obj.is_strand and "strand" in ss:
-                return True
-            if not (am.obj.is_helix or am.obj.is_strand) and "loop" in ss:
-                return True
-            return False
 
         # Generate the model via given coordinates
         def add_to_sub_model(va, ta, color, cid):
