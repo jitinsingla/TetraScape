@@ -327,14 +327,13 @@ class Tetra:
             if not (ch_id in sequence.keys() or in_sequence):
                 va, ta, color, x = [], [], [], 0
                 for am in chain:
-                    if (check_ss(am)):
-                        ta.extend([[12*x, 12*x+3, 12*x+6], [12*x+1, 12*x+7, 12*x+9], [12*x+2, 12*x+4, 12*x+10], [12*x+5, 12*x+8, 12*x+11]])
-                        color.extend([am.obj.ribbon_color for i in range(12)])
-                        va.append(am.model_coords)
-                        x += 1
+                    ta.extend([[12*x, 12*x+3, 12*x+6], [12*x+1, 12*x+7, 12*x+9], [12*x+2, 12*x+4, 12*x+10], [12*x+5, 12*x+8, 12*x+11]])
+                    color.extend([am.obj.ribbon_color for i in range(12)])
+                    va.append(am.model_coords)
+                    x += 1
 
                 va = np.array(va, np.float32)
-                color = np.array(color, np.floatat32)
+                color = np.array(color, np.float32)
                 if 0 not in va.shape:
                     add_to_sub_model(va, ta, color, ch_id)
 
@@ -347,14 +346,14 @@ class Tetra:
                 cond = any([seq[0] <= am.obj.number and am.obj.number <= seq[1] for seq in seq_lst])
 
                 # Check weather the current residue to be converted to tetra model or not
-                if (in_sequence and cond) or not (in_sequence or cond) and check_ss(am):
+                if (in_sequence and cond) or not (in_sequence or cond):
                     ta.extend([[12*x, 12*x + 3, 12*x + 6], [12*x + 1, 12*x + 7, 12*x + 9], [12*x + 2, 12*x + 4, 12*x + 10], [12*x + 5, 12*x + 8, 12*x + 11]])
                     color.extend([am.obj.ribbon_color for i in range(12)])
                     va.append(am.model_coords)
                     x += 1
 
             va = np.array(va, np.float32)
-            color = np.array(color, np.floatat32)
+            color = np.array(color, np.float32)
             if 0 not in va.shape:
                 add_to_sub_model(va, ta, color, ids)
 
