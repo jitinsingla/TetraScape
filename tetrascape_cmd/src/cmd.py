@@ -1,7 +1,6 @@
 import numpy as np
 import alphashape, trimesh
 from itertools import permutations, combinations
-
 from chimerax.core.models import Model
 from chimerax.atomic import UniqueChainsArg, ResiduesArg
 from chimerax.surface import calculate_vertex_normals
