@@ -1,10 +1,10 @@
-<BundleInfo name = "TetraScape" 
-	version = "0.1" package = "TetraScape"
+<BundleInfo name = "ChimeraX-TetraScape" 
+	version = "0.1" package = "code.TetraScape"
 	minSessionVersion = "1" maxSessionVersion = "1">
 
 	<Author> Jitin Singla </Author>
 	<Email> jsingla@bt.iitr.ac.in </Email>
-	<URL>https://www.rbvi.ucsf.edu/chimerax/</URL>
+	<URL>https://www.jitinsingla.in</URL>
 
 	<Synopsis> Protein Visualization using tetrahedral design language </Synopsis>
 	<Description> The representations or models are generated using a regular tetrahedron building block.
