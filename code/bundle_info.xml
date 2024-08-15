@@ -1,13 +1,18 @@
-<BundleInfo name = "ChimeraX-TetraScapeCommand" 
-	version = "0.1" package = "tetrascape_cmd"
+<BundleInfo name = "TetraScape" 
+	version = "0.1" package = "TetraScape"
 	minSessionVersion = "1" maxSessionVersion = "1">
 
-	<Author> IIT Roorkee </Author>
-	<Email> roshan_k@bt.iitr.ac.in </Email>
+	<Author> Jitin Singla </Author>
+	<Email> jsingla@bt.iitr.ac.in </Email>
 	<URL>https://www.rbvi.ucsf.edu/chimerax/</URL>
 
-	<Synopsis> Low Poly Protein Design using Tetrahedrons </Synopsis>
-	<Description> Will be available soon... </Description>
+	<Synopsis> Protein Visualization using tetrahedral design language </Synopsis>
+	<Description> The representations or models are generated using a regular tetrahedron building block.
+		The design language allows users to generate protein representations with unique silhouettes.
+		Users can render parts of the protein at amino acid resolution and rest as a volumetric rendering called “massing”.
+		This gives users the option to generate two types of models, TetraChain models, where complete protein
+		is represented at amino acid resolution, and TetraMass models, which combine massing to
+		generate multi-resolution representations. </Description>
 
 	<Categories> <Category name = "General"/> </Categories>
 	<DataFiles> <DataFile> README.txt </DataFile> </DataFiles>
@@ -17,15 +22,16 @@
 		<Dependency name = "ChimeraX-Surface"/>
 		<Dependency name = "alphashape"/>
 		<Dependency name = "trimesh"/>
+		<Dependency name = "pyvista"/>
 	</Dependencies>
 
 	<Classifiers>
 		<PythonClassifier> Development Status :: 1 - Planning </PythonClassifier>
 		<PythonClassifier> License :: Freeware </PythonClassifier>
 
-		<ChimeraXClassifier> ChimeraX :: Command :: tetra :: General :: Create a tetrahedral model 
+		<ChimeraXClassifier> ChimeraX :: Command :: tetraChain :: General :: Creates a TetraChain model 
 		</ChimeraXClassifier>
-		<ChimeraXClassifier> ChimeraX :: Command :: massing :: General :: Create a massing model 
+		<ChimeraXClassifier> ChimeraX :: Command :: tetraMass :: General :: Creates a TetraMass model 
 		</ChimeraXClassifier>
 
 	</Classifiers>
