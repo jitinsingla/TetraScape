@@ -3,10 +3,7 @@ import alphashape, trimesh, gc, logging, warnings
 warnings.filterwarnings("ignore")
 from itertools import permutations, combinations
 from chimerax.core.models import Model
-from chimerax.atomic import ResiduesArg
 from chimerax.surface import calculate_vertex_normals
-from chimerax.core.toolshed import BundleAPI
-from chimerax.core.commands import BoolArg, IntArg, CmdDesc, register, FloatArg
 from chimerax.atomic import all_residues
 
 ht3 = 0.81649658092772603273242802490196379732198249355222337614423086
