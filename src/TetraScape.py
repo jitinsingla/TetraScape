@@ -344,7 +344,8 @@ class Tetra:
 
             sub_model.vertex_colors = color
             self.tetrahedron_model.add([sub_model])
-
+        # print("In sequence:", in_sequence)
+        # print("Sequence:", sequence)
         for (ch_id, chain) in self.protein.items():
             # In case of in_sequence=False, all the chains not in sequence will be converted to tetra model
             if not (ch_id in sequence.keys() or in_sequence):
@@ -362,12 +363,10 @@ class Tetra:
 
         for (ids, seq_lst) in sequence.items():
             va, ta, color, x = [], [], [], 0
-
             if ids not in self.protein.keys():
                 continue
             for am in self.protein[ids]:
                 cond = any([seq[0] <= am.obj.number and am.obj.number <= seq[1] for seq in seq_lst])
-
                 # Check weather the current residue to be converted to tetra model or not
                 if (in_sequence and cond) or not (in_sequence or cond): #xnor operation
                     ta.extend([[12*x, 12*x + 3, 12*x + 6], [12*x + 1, 12*x + 7, 12*x + 9], [12*x + 2, 12*x + 4, 12*x + 10], [12*x + 5, 12*x + 8, 12*x + 11]])
@@ -526,12 +525,15 @@ def massing_model(session, residues=None, unit=2, alpha=0.2, checkOverlap=True, 
             count += 1
     for structure, chain_residue_intervals in residue_intervals(residues):
         t = Tetra(session, models = [structure])
+        # print("Chain Residue Intervals:")
         # print(chain_residue_intervals)
         if tetraChainResidues is not None:
-            print(residue_intervals_tetraChain[structure_Dict[structure]][1])
             tetraChainSequence = residue_intervals_tetraChain[structure_Dict[structure]][1]
+            tetraChainSequence = remove_overlap(tetraChainSequence, chain_residue_intervals)
+            # print(tetraChainSequence)
         else:
             tetraChainSequence = chain_residue_intervals
+        # print("Tetra Chain Sequence:")
         # print(tetraChainSequence)
         t.massing(sequence = chain_residue_intervals, unit = unit, alpha = alpha, checkOverlap = checkOverlap, tetraChain = tetraChain, tetraChainResidues=tetraChainResidues, tetraChainSequence=tetraChainSequence)
         print("----------------------------------")
@@ -573,3 +575,43 @@ def number_intervals(cres):
             start = end = num
     intervals.append((start,end))
     return intervals
+
+def remove_overlap(tetraChainSequence, chain_residue_intervals):
+    def remove_overlap_from_interval(interval, forbidden_intervals):
+        start, end = interval
+        adjusted_intervals = []
+        
+        for forbidden_start, forbidden_end in forbidden_intervals:
+            if end < forbidden_start or start > forbidden_end:
+                # No overlap
+                continue
+            if start < forbidden_start and end > forbidden_end:
+                # Split into two intervals
+                adjusted_intervals.append((start, forbidden_start - 1))
+                start = forbidden_end + 1
+            elif start < forbidden_start:
+                end = forbidden_start - 1
+            elif end > forbidden_end:
+                start = forbidden_end + 1
+            else:
+                # Fully overlapped
+                start, end = -1, -1
+
+        if start <= end and start != -1:
+            adjusted_intervals.append((start, end))
+
+        return adjusted_intervals
+
+    result = {}
+    for chain, intervals in tetraChainSequence.items():
+        if chain in chain_residue_intervals:
+            forbidden_intervals = chain_residue_intervals[chain]
+            new_intervals = []
+            for interval in intervals:
+                adjusted_intervals = remove_overlap_from_interval(interval, forbidden_intervals)
+                new_intervals.extend(adjusted_intervals)
+            result[chain] = new_intervals
+        else:
+            result[chain] = intervals
+
+    return result
