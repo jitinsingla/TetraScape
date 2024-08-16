@@ -1,10 +1,10 @@
 <BundleInfo name = "ChimeraX-TetraScape" 
-	version = "0.1" package = "code.TetraScape"
+	version = "0.1" package = "chimerax.TetraScape"
 	minSessionVersion = "1" maxSessionVersion = "1">
 
 	<Author> Jitin Singla </Author>
 	<Email> jsingla@bt.iitr.ac.in </Email>
-	<URL>https://www.jitinsingla.in</URL>
+	<URL>https://www.rbvi.ucsf.edu/chimerax/</URL>
 
 	<Synopsis> Protein Visualization using tetrahedral design language </Synopsis>
 	<Description> The representations or models are generated using a regular tetrahedron building block.
@@ -15,7 +15,7 @@
 		generate multi-resolution representations. </Description>
 
 	<Categories> <Category name = "General"/> </Categories>
-	<DataFiles> <DataFile> README.txt </DataFile> </DataFiles>
+	<DataFiles> <DataFile> README.md </DataFile> </DataFiles>
 
 	<Dependencies> 
 		<Dependency name = "ChimeraX-Core"/> 
@@ -28,12 +28,8 @@
 	<Classifiers>
 		<PythonClassifier> Development Status :: 1 - Planning </PythonClassifier>
 		<PythonClassifier> License :: Freeware </PythonClassifier>
-
-		<ChimeraXClassifier> ChimeraX :: Command :: tetraChain :: General :: Creates a TetraChain model 
-		</ChimeraXClassifier>
-		<ChimeraXClassifier> ChimeraX :: Command :: tetraMass :: General :: Creates a TetraMass model 
-		</ChimeraXClassifier>
-
+		<ChimeraXClassifier> ChimeraX :: Command :: tetraChain :: General :: Creates a TetraChain model </ChimeraXClassifier>
+		<ChimeraXClassifier> ChimeraX :: Command :: tetraMass :: General :: Creates a TetraMass model </ChimeraXClassifier>
 	</Classifiers>
 
 </BundleInfo>
