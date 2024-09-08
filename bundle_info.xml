@@ -1,5 +1,5 @@
 <BundleInfo name = "ChimeraX-TetraScape" 
-	version = "0.2" package = "chimerax.TetraScape"
+	version = "0.3" package = "chimerax.TetraScape"
 	minSessionVersion = "1" maxSessionVersion = "1">
 
 	<Author> Jitin Singla </Author>
