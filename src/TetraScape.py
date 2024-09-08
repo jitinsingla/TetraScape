@@ -5,8 +5,6 @@ from itertools import permutations, combinations
 from chimerax.core.models import Model
 from chimerax.atomic import ResiduesArg
 from chimerax.surface import calculate_vertex_normals
-from chimerax.core.toolshed import BundleAPI
-from chimerax.core.commands import BoolArg, IntArg, CmdDesc, register, FloatArg
 from chimerax.atomic import all_residues
 
 ht3 = 0.81649658092772603273242802490196379732198249355222337614423086
@@ -525,12 +523,15 @@ def massing_model(session, residues=None, unit=2, alpha=0.2, checkOverlap=True, 
             count += 1
     for structure, chain_residue_intervals in residue_intervals(residues):
         t = Tetra(session, models = [structure])
-        # print("Chain Residue Intervals:")
-        # print(chain_residue_intervals)
+        print("Chain Residue Intervals:")
+        print(chain_residue_intervals)
         if tetraChainResidues is not None:
             tetraChainSequence = residue_intervals_tetraChain[structure_Dict[structure]][1]
+            print("Before overlap removal:")
+            print(tetraChainSequence)
             tetraChainSequence = remove_overlap(tetraChainSequence, chain_residue_intervals)
-            # print(tetraChainSequence)
+            print("After overlap removal:")
+            print(tetraChainSequence)
         else:
             tetraChainSequence = chain_residue_intervals
         # print("Tetra Chain Sequence:")
@@ -615,3 +616,23 @@ def remove_overlap(tetraChainSequence, chain_residue_intervals):
             result[chain] = intervals
 
     return result
+
+def tetra_command(session, subcommand, residues=None, **kwargs):
+    if subcommand == 'chain':
+        tetrahedral_model(
+            session,
+            residues=residues,
+            revSeq=kwargs.get('reverse', False)
+        )
+    elif subcommand == 'mass':
+        massing_model(
+            session, 
+            residues=residues,
+            unit=kwargs.get('unit', 2.0),
+            alpha=kwargs.get('alpha', 0.2),
+            checkOverlap=kwargs.get('overlap', True),
+            tetraChain=kwargs.get('chain', True),
+            tetraChainResidues=kwargs.get('chainResidues', None)
+        )
+    else:
+        session.logger.warning(f"Unknown subcommand: {subcommand}")
